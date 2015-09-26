@@ -119,15 +119,18 @@ public class ForecastFragment extends Fragment {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 // Get the message in item on ListView
-                String toastMessage = listView.getItemAtPosition(position).toString();
-                // Get the context of the app and make toast
-                Context context = getContext();
-                Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show();
+                String forecast = listView.getItemAtPosition(position).toString();
+
+                Intent intent = new Intent(getActivity(), DetailActivity.class).putExtra(Intent.EXTRA_TEXT, forecast);
+                startActivity(intent);
             }
         });
-        // Fill the list with the data from server
-        FetchWeatherTask weatherTask = new FetchWeatherTask();
-        weatherTask.execute("Jatai");
+
+        if(mForecastAdapter.isEmpty()) {
+            // Fill the list with the data from server
+            FetchWeatherTask weatherTask = new FetchWeatherTask();
+            weatherTask.execute("Jatai");
+        }
 
         return rootView;
     }
