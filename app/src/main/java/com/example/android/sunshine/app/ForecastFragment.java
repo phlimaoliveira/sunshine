@@ -23,6 +23,7 @@ import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.UserHandle;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
@@ -76,6 +77,13 @@ public class ForecastFragment extends Fragment {
         setHasOptionsMenu(true);
     }
 
+    // When the app initialize, should be a consult in the web server and fill the listview with the data
+    @Override
+    public void onStart(){
+        super.onStart();
+        updateWeather();
+    }
+
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         inflater.inflate(R.menu.forecastfragment, menu);
@@ -88,8 +96,7 @@ public class ForecastFragment extends Fragment {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         if (id == R.id.action_refresh) {
-            FetchWeatherTask weatherTask = new FetchWeatherTask();
-            weatherTask.execute("Jatai");
+            updateWeather();
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -126,17 +133,20 @@ public class ForecastFragment extends Fragment {
             }
         });
 
-        if(mForecastAdapter.isEmpty()) {
-            // Fill the list with the data from server
-            FetchWeatherTask weatherTask = new FetchWeatherTask();
-            weatherTask.execute("Jatai");
-        }
-
         return rootView;
     }
 
+    public void updateWeather() {
+        FetchWeatherTask weatherTask = new FetchWeatherTask();
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String location = prefs.getString(getString(R.string.pref_location_key), getString(R.string.pref_location_default));
+        String metric = prefs.getString(getString(R.string.pref_temperature_key), getString(R.string.pref_location_default));
+        weatherTask.execute(location, metric);
+    }
+
     // Create the AsyncTask for the background operations
-    public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
+    public class FetchWeatherTask extends AsyncTask<String, String, String[]> {
 
         // String LOG_TAG is synchronized with the name of the class
         private final String LOG_TAG = FetchWeatherTask.class.getSimpleName();
@@ -146,15 +156,31 @@ public class ForecastFragment extends Fragment {
             return shortenedDateFormat.format(time);
         }
 
-        private String formatHighLows(double high, double low) {
+        public double convertToFahrenheit(double temperature) {
+            // Convert temperature Celsius to Fahrenheit
+            return (temperature * 1.8) + 32;
+        }
+
+        private String formatHighLows(double high, double low, String metric) {
+            // Verifies if temperature preference is metric or imperial... Else, then nothing to do because the response of the server is in metrics units
+            if(metric.equals("Imperial")) {
+                high = convertToFahrenheit(high);
+                low = convertToFahrenheit(low);
+            }
+
             long roundedHigh = Math.round(high);
             long roundedLow = Math.round(low);
 
-            String highLowStr = roundedHigh + "/" + roundedLow;
+            String highLowStr = null;
+            if(metric.equals("Metrics")) {
+                highLowStr  = "ºC = " + roundedHigh + "/" + roundedLow;
+            } else if(metric.equals("Imperial")) {
+                highLowStr = "ºF = " + roundedHigh + "/" + roundedLow;
+            }
             return highLowStr;
         }
 
-        private String[] getWeatherDataFromJson(String forecastJsonStr, int numDays) throws JSONException {
+        private String[] getWeatherDataFromJson(String forecastJsonStr, int numDays, String metric) throws JSONException {
             final String OWM_LIST = "list";
             final String OWM_WEATHER = "weather";
             final String OWM_TEMPERATURE = "temp";
@@ -191,7 +217,7 @@ public class ForecastFragment extends Fragment {
                 double high = temperatureObject.getDouble(OWM_MAX);
                 double low = temperatureObject.getDouble(OWM_MIN);
 
-                highAndLow = formatHighLows(high, low);
+                highAndLow = formatHighLows(high, low, metric);
                 resultStrs[i] = day + " - " + description + " - " + highAndLow;
             }
 
@@ -283,7 +309,7 @@ public class ForecastFragment extends Fragment {
             }
 
             try {
-                return getWeatherDataFromJson(forecastJsonStr, numDays);
+                return getWeatherDataFromJson(forecastJsonStr, numDays, params[1]);
             } catch(JSONException e) {
                 e.printStackTrace();
             }
