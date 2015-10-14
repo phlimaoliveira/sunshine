@@ -243,6 +243,7 @@ public class ForecastFragment extends Fragment {
 
             String format = "json";
             String units = "metric";
+            String appid = "bd82977b86bf27fb59a04b61b657fb6f";
             int numDays = 7;
 
             try {
@@ -250,16 +251,19 @@ public class ForecastFragment extends Fragment {
                 // Possible parameters are avaiable at OWM's forecast API page, at
                 // http://openweathermap.org/API#forecast
                 // Create a dynamic URL through Uri.net class
+                //http://api.openweathermap.org/data/2.5/weather?q=London&appid=bd82977b86bf27fb59a04b61b657fb6f
                 final String FORECAST_BASE_URL="http://api.openweathermap.org/data/2.5/forecast/daily?";
                 final String QUERY_PARAM = "q";
                 final String FORMAT_PARAM = "mode";
                 final String UNITS_PARAM = "units";
                 final String DAYS_PARAM = "cnt";
+                final String APPID = "appid";
 
                 Uri builtUri = Uri.parse(FORECAST_BASE_URL).buildUpon().appendQueryParameter(QUERY_PARAM, params[0]).
                                                                         appendQueryParameter(FORMAT_PARAM, format).
                                                                         appendQueryParameter(UNITS_PARAM, units).
-                                                                        appendQueryParameter(DAYS_PARAM, Integer.toString(numDays)).build();
+                                                                        appendQueryParameter(DAYS_PARAM, Integer.toString(numDays)).
+                                                                        appendQueryParameter(APPID, appid).build();
 
                 URL url = new URL(builtUri.toString());
 
